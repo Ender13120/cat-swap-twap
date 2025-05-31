@@ -127,6 +127,34 @@ contract DelegatedWallet is IERC1271 {
         bool isValid; // Whether this is a valid TWAP part order
     }
 
+    struct BatchSwapOrder {
+        address tokenOut; // Token to sell
+        address tokenIn; // Token to buy
+        uint256 totalAmountOut; // Total amount of tokenOut to sell across all parts
+        uint256 minAmountInPerPart; // Minimum amount of tokenIn to receive per part
+        uint256 timestamp; // When the order was created
+        uint256 expiration; // When the order expires
+        bytes32 orderHash; // Unique order identifier (hash of order details)
+        uint256 batchParts; // Number of separate executions allowed
+        uint256 minTimeBetweenExecutions; // Minimum time between executions in seconds
+        uint256 maxPriceDeviation; // Max price deviation in basis points for price protection
+        uint256 executorTipBps; // Tip for executor in basis points
+        // Dutch auction parameters (applied to each part)
+        uint256 startPremiumBps; // Starting premium in basis points
+        uint256 decayRateBps; // Decay rate per interval in basis points
+        uint256 decayInterval; // Time interval for each decay step in seconds
+    }
+
+    struct BatchSwapExecution {
+        bytes32 orderHash; // Hash of the parent batch order
+        uint256 partIndex; // Which part of the batch (0 to batchParts-1)
+        uint256 executionTime; // When this part was executed
+        uint256 actualAmountOut; // Actual amount sold in this execution
+        uint256 actualAmountIn; // Actual amount received in this execution
+        uint256 currentPrice; // Price at time of execution
+        address executor; // Who executed this part
+    }
+
     // ========================================================================
     // EVENTS
     // ========================================================================
@@ -181,6 +209,27 @@ contract DelegatedWallet is IERC1271 {
 
     event LimitOrderCancelled(bytes32 indexed orderHash);
 
+    event BatchSwapOrderRegistered(
+        bytes32 indexed orderHash,
+        address indexed tokenOut,
+        address indexed tokenIn,
+        uint256 totalAmountOut,
+        uint256 batchParts,
+        uint256 minTimeBetweenExecutions
+    );
+
+    event BatchSwapPartExecuted(
+        bytes32 indexed orderHash,
+        uint256 indexed partIndex,
+        address indexed executor,
+        uint256 amountOut,
+        uint256 amountIn,
+        uint256 currentPrice,
+        uint256 executorTip
+    );
+
+    event BatchSwapOrderCancelled(bytes32 indexed orderHash);
+
     // ========================================================================
     // ERRORS
     // ========================================================================
@@ -197,6 +246,13 @@ contract DelegatedWallet is IERC1271 {
     error TWAPPartNotReady(uint256 currentTime, uint256 nextExecutionTime);
     error PriceDeviationTooHigh(uint256 currentPrice, uint256 maxDeviation);
     error InvalidTWAPParameters();
+    error BatchSwapNotStarted(uint256 currentTime, uint256 nextExecutionTime);
+    error BatchSwapEnded(uint256 currentTime, uint256 endTime);
+    error BatchSwapPartAlreadyExecuted(uint256 partIndex);
+    error BatchSwapPartNotReady(uint256 currentTime, uint256 nextExecutionTime);
+    error InvalidBatchSwapParameters();
+    error BatchSwapOrderNotFound(bytes32 orderHash);
+    error BatchSwapOrderAlreadyCancelled(bytes32 orderHash);
 
     // ========================================================================
     // STATE VARIABLES
@@ -216,6 +272,14 @@ contract DelegatedWallet is IERC1271 {
     mapping(bytes32 => uint256) public twapInitialPrice; // Initial price for price protection
     mapping(bytes32 => TWAPPartOrder) public twapPartOrders; // Track individual TWAP part orders
     mapping(bytes32 => address) public twapPartExecutors; // Track who initiated each TWAP part
+
+    // Batch swap tracking
+    mapping(bytes32 => BatchSwapOrder) public batchSwapOrders; // Store batch swap order details
+    mapping(bytes32 => mapping(uint256 => BatchSwapExecution))
+        public batchSwapExecutions; // Track batch swap executions
+    mapping(bytes32 => uint256) public batchSwapExecutedParts; // Count of executed parts per batch order
+    mapping(bytes32 => uint256) public batchSwapLastExecutionTime; // Track last execution time for timing
+    mapping(bytes32 => bool) public cancelledBatchSwapOrders; // Track cancelled batch swap orders
 
     // 1inch Limit Order Protocol contract
     IOrderMixin public immutable limitOrderProtocol;
@@ -375,6 +439,233 @@ contract DelegatedWallet is IERC1271 {
                 order.decayRateBps -
                 1) / order.decayRateBps; // Ceiling division
             timeRemaining = remainingSteps * order.decayInterval;
+        }
+    }
+
+    // ========================================================================
+    // BATCH SWAP FUNCTIONS
+    // ========================================================================
+
+    /**
+     * @notice Register a batch swap order that allows multiple executions with a single signature
+     * @param batchOrder The batch swap order parameters
+     * @param userSig User's signature authorizing the batch swap order
+     */
+    function registerBatchSwapOrder(
+        BatchSwapOrder calldata batchOrder,
+        bytes calldata userSig
+    ) external returns (bytes32 orderHash) {
+        // Validate batch swap parameters
+        if (batchOrder.batchParts == 0 || batchOrder.batchParts > 100)
+            revert InvalidBatchSwapParameters();
+        if (batchOrder.totalAmountOut == 0) revert InvalidBatchSwapParameters();
+        if (batchOrder.expiration <= block.timestamp)
+            revert InvalidBatchSwapParameters();
+        if (batchOrder.maxPriceDeviation > 5000)
+            revert InvalidBatchSwapParameters();
+        if (batchOrder.executorTipBps > 1000)
+            revert InvalidBatchSwapParameters();
+
+        // Generate order hash
+        orderHash = keccak256(
+            abi.encode(
+                batchOrder.tokenOut,
+                batchOrder.tokenIn,
+                batchOrder.totalAmountOut,
+                batchOrder.minAmountInPerPart,
+                batchOrder.timestamp,
+                batchOrder.expiration,
+                batchOrder.batchParts,
+                batchOrder.minTimeBetweenExecutions,
+                batchOrder.maxPriceDeviation,
+                batchOrder.executorTipBps,
+                batchOrder.startPremiumBps,
+                batchOrder.decayRateBps,
+                batchOrder.decayInterval,
+                block.chainid,
+                address(this)
+            )
+        );
+
+        // Verify user signature
+        if (!_verifyBatchSwapOrderSignature(batchOrder, orderHash, userSig))
+            revert BadSignature();
+
+        // Store the batch order with the generated hash
+        BatchSwapOrder memory orderToStore = batchOrder;
+        orderToStore.orderHash = orderHash;
+        batchSwapOrders[orderHash] = orderToStore;
+
+        // Initialize tracking variables
+        batchSwapExecutedParts[orderHash] = 0;
+        batchSwapLastExecutionTime[orderHash] = 0;
+
+        emit BatchSwapOrderRegistered(
+            orderHash,
+            batchOrder.tokenOut,
+            batchOrder.tokenIn,
+            batchOrder.totalAmountOut,
+            batchOrder.batchParts,
+            batchOrder.minTimeBetweenExecutions
+        );
+
+        return orderHash;
+    }
+
+    /**
+     * @notice Execute a part of a batch swap order
+     * @param orderHash Hash of the batch swap order to execute
+     * @param swapCall The actual swap call to execute (e.g., to DEX router)
+     * @param currentPrice Current market price for price protection validation
+     */
+    function executeBatchSwapPart(
+        bytes32 orderHash,
+        Call calldata swapCall,
+        uint256 currentPrice
+    ) external returns (bytes memory result) {
+        BatchSwapOrder memory order = batchSwapOrders[orderHash];
+
+        // Verify order exists
+        if (order.orderHash == bytes32(0)) {
+            revert BatchSwapOrderNotFound(orderHash);
+        }
+
+        // Verify order is not cancelled
+        if (cancelledBatchSwapOrders[orderHash]) {
+            revert BatchSwapOrderAlreadyCancelled(orderHash);
+        }
+
+        // Verify order hasn't expired
+        if (block.timestamp > order.expiration) {
+            revert OrderExpired(order.expiration, block.timestamp);
+        }
+
+        uint256 executedParts = batchSwapExecutedParts[orderHash];
+
+        // Verify there are parts left to execute
+        require(executedParts < order.batchParts, "All parts already executed");
+
+        // Verify timing constraints
+        uint256 lastExecutionTime = batchSwapLastExecutionTime[orderHash];
+        if (
+            lastExecutionTime > 0 &&
+            block.timestamp < lastExecutionTime + order.minTimeBetweenExecutions
+        ) {
+            revert BatchSwapPartNotReady(
+                block.timestamp,
+                lastExecutionTime + order.minTimeBetweenExecutions
+            );
+        }
+
+        // Validate price protection (if this isn't the first execution)
+        if (executedParts > 0) {
+            _validateBatchSwapPriceProtection(
+                orderHash,
+                currentPrice,
+                order.maxPriceDeviation
+            );
+        }
+
+        // Calculate amount for this part
+        uint256 remainingParts = order.batchParts - executedParts;
+        uint256 remainingAmount = _calculateRemainingBatchAmount(
+            orderHash,
+            order
+        );
+        uint256 partAmountOut = remainingAmount / remainingParts;
+
+        // Apply Dutch auction pricing to this part
+        uint256 currentAmountOut = _calculateBatchPartCurrentAmountOut(
+            order,
+            partAmountOut
+        );
+
+        // Execute the swap
+        result = _executeBatchSwapCall(
+            orderHash,
+            executedParts,
+            order,
+            swapCall,
+            currentAmountOut,
+            currentPrice
+        );
+
+        return result;
+    }
+
+    /**
+     * @notice Cancel a batch swap order
+     * @param orderHash The hash of the order to cancel
+     * @param userSig User's signature authorizing the cancellation
+     */
+    function cancelBatchSwapOrder(
+        bytes32 orderHash,
+        bytes calldata userSig
+    ) external {
+        // Verify order exists
+        require(
+            batchSwapOrders[orderHash].orderHash != bytes32(0),
+            "Order not found"
+        );
+        require(
+            !cancelledBatchSwapOrders[orderHash],
+            "Order already cancelled"
+        );
+
+        // Verify user signature for cancellation
+        bytes32 cancelHash = MessageHashUtils.toEthSignedMessageHash(
+            keccak256(
+                abi.encode(
+                    address(this),
+                    orderHash,
+                    "CANCEL_BATCH_SWAP_ORDER",
+                    block.chainid
+                )
+            )
+        );
+
+        if (cancelHash.recover(userSig) != address(this)) revert BadSignature();
+
+        // Mark as cancelled
+        cancelledBatchSwapOrders[orderHash] = true;
+
+        emit BatchSwapOrderCancelled(orderHash);
+    }
+
+    /**
+     * @notice Get batch swap order execution status
+     * @param orderHash Hash of the batch swap order
+     * @return order The batch swap order details
+     * @return executedParts Number of parts executed
+     * @return nextExecutionTime When the next part can be executed
+     * @return isComplete Whether all parts have been executed
+     * @return isCancelled Whether the order is cancelled
+     */
+    function getBatchSwapStatus(
+        bytes32 orderHash
+    )
+        external
+        view
+        returns (
+            BatchSwapOrder memory order,
+            uint256 executedParts,
+            uint256 nextExecutionTime,
+            bool isComplete,
+            bool isCancelled
+        )
+    {
+        order = batchSwapOrders[orderHash];
+        executedParts = batchSwapExecutedParts[orderHash];
+        isComplete = executedParts >= order.batchParts;
+        isCancelled = cancelledBatchSwapOrders[orderHash];
+
+        if (!isComplete && !isCancelled && executedParts > 0) {
+            uint256 lastExecutionTime = batchSwapLastExecutionTime[orderHash];
+            nextExecutionTime =
+                lastExecutionTime +
+                order.minTimeBetweenExecutions;
+        } else if (executedParts == 0) {
+            nextExecutionTime = block.timestamp; // Can execute immediately
         }
     }
 
@@ -1187,6 +1478,191 @@ contract DelegatedWallet is IERC1271 {
                 partIndex,
                 order.salt
             );
+    }
+
+    // ========================================================================
+    // BATCH SWAP HELPER FUNCTIONS
+    // ========================================================================
+
+    /**
+     * @dev Verify user signature for batch swap order
+     */
+    function _verifyBatchSwapOrderSignature(
+        BatchSwapOrder calldata batchOrder,
+        bytes32 orderHash,
+        bytes calldata userSig
+    ) internal view returns (bool) {
+        bytes32 messageHash = MessageHashUtils.toEthSignedMessageHash(
+            orderHash
+        );
+        return messageHash.recover(userSig) == address(this);
+    }
+
+    /**
+     * @dev Calculate remaining amount for batch swap
+     */
+    function _calculateRemainingBatchAmount(
+        bytes32 orderHash,
+        BatchSwapOrder memory order
+    ) internal view returns (uint256 remainingAmount) {
+        uint256 executedParts = batchSwapExecutedParts[orderHash];
+        uint256 executedAmount = 0;
+
+        // Sum up executed amounts
+        for (uint256 i = 0; i < executedParts; i++) {
+            executedAmount += batchSwapExecutions[orderHash][i].actualAmountOut;
+        }
+
+        remainingAmount = order.totalAmountOut - executedAmount;
+    }
+
+    /**
+     * @dev Calculate current amount out for a batch part using Dutch auction
+     */
+    function _calculateBatchPartCurrentAmountOut(
+        BatchSwapOrder memory order,
+        uint256 basePartAmount
+    ) internal view returns (uint256 currentAmountOut) {
+        if (order.startPremiumBps == 0 && order.decayRateBps == 0) {
+            return basePartAmount; // No Dutch auction
+        }
+
+        uint256 timeElapsed = block.timestamp - order.timestamp;
+
+        // If no time has passed, use the starting premium
+        if (timeElapsed == 0) {
+            return
+                basePartAmount +
+                ((basePartAmount * order.startPremiumBps) / 10000);
+        }
+
+        // Calculate how many decay intervals have passed
+        uint256 decaySteps = timeElapsed / order.decayInterval;
+
+        // Calculate total decay amount
+        uint256 totalDecayBps = decaySteps * order.decayRateBps;
+
+        // If total decay exceeds the starting premium, return the base amount
+        if (totalDecayBps >= order.startPremiumBps) {
+            return basePartAmount;
+        }
+
+        // Calculate remaining premium
+        uint256 remainingPremiumBps = order.startPremiumBps - totalDecayBps;
+
+        // Return base amount plus remaining premium
+        return
+            basePartAmount + ((basePartAmount * remainingPremiumBps) / 10000);
+    }
+
+    /**
+     * @dev Validate price protection for batch swap execution
+     */
+    function _validateBatchSwapPriceProtection(
+        bytes32 orderHash,
+        uint256 currentPrice,
+        uint256 maxDeviationBps
+    ) internal view {
+        // Get the price from the first execution for comparison
+        BatchSwapExecution memory firstExecution = batchSwapExecutions[
+            orderHash
+        ][0];
+        uint256 initialPrice = firstExecution.currentPrice;
+
+        // Calculate price deviation
+        uint256 deviation;
+        if (currentPrice > initialPrice) {
+            deviation = ((currentPrice - initialPrice) * 10000) / initialPrice;
+        } else {
+            deviation = ((initialPrice - currentPrice) * 10000) / initialPrice;
+        }
+
+        if (deviation > maxDeviationBps) {
+            revert PriceDeviationTooHigh(currentPrice, maxDeviationBps);
+        }
+    }
+
+    /**
+     * @dev Execute the batch swap call and update tracking
+     */
+    function _executeBatchSwapCall(
+        bytes32 orderHash,
+        uint256 partIndex,
+        BatchSwapOrder memory order,
+        Call calldata swapCall,
+        uint256 currentAmountOut,
+        uint256 currentPrice
+    ) internal returns (bytes memory returnData) {
+        // Record balances before swap
+        uint256 tokenInBefore = IERC20(order.tokenIn).balanceOf(address(this));
+        uint256 tokenOutBefore = IERC20(order.tokenOut).balanceOf(
+            address(this)
+        );
+
+        // Approve the swap contract to spend our tokens
+        IERC20(order.tokenOut).approve(swapCall.to, currentAmountOut);
+
+        // Execute the swap call
+        (bool success, bytes memory data) = swapCall.to.call{
+            value: swapCall.value
+        }(swapCall.data);
+        require(success, "batch swap call failed");
+
+        // Verify swap results
+        uint256 actualAmountOut = tokenOutBefore -
+            IERC20(order.tokenOut).balanceOf(address(this));
+        uint256 actualAmountIn = IERC20(order.tokenIn).balanceOf(
+            address(this)
+        ) - tokenInBefore;
+
+        // Verify we sold at least the current amount (allow 1% tolerance for fees)
+        require(
+            actualAmountOut >= (currentAmountOut * 99) / 100,
+            "insufficient tokenOut sold for current price"
+        );
+
+        // Verify we received at least the minimum required per part
+        if (actualAmountIn < order.minAmountInPerPart) {
+            revert InsufficientReturn(order.minAmountInPerPart, actualAmountIn);
+        }
+
+        // Calculate executor tip
+        uint256 executorTip = (actualAmountIn * order.executorTipBps) / 10000;
+        if (executorTip > 0) {
+            // Transfer tip to executor
+            require(
+                IERC20(order.tokenIn).transfer(msg.sender, executorTip),
+                "executor tip transfer failed"
+            );
+            actualAmountIn -= executorTip; // Adjust the actual amount received
+        }
+
+        // Record execution
+        batchSwapExecutions[orderHash][partIndex] = BatchSwapExecution({
+            orderHash: orderHash,
+            partIndex: partIndex,
+            executionTime: block.timestamp,
+            actualAmountOut: actualAmountOut,
+            actualAmountIn: actualAmountIn,
+            currentPrice: currentPrice,
+            executor: msg.sender
+        });
+
+        // Update tracking
+        batchSwapExecutedParts[orderHash]++;
+        batchSwapLastExecutionTime[orderHash] = block.timestamp;
+
+        emit BatchSwapPartExecuted(
+            orderHash,
+            partIndex,
+            msg.sender,
+            actualAmountOut,
+            actualAmountIn,
+            currentPrice,
+            executorTip
+        );
+
+        return data;
     }
 
     // ========================================================================

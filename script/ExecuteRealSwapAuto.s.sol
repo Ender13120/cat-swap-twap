@@ -21,7 +21,7 @@ contract ExecuteRealSwapAuto is Script {
 
     // Implementation contract address for EIP-7702 (new contract with auto-approval)
     address constant IMPLEMENTATION_ADDRESS =
-        0x3Acd6C0028784d800e3830D2F6DceC232e540444;
+        0x6B90FAF6d634EDE2E56c024A9b852A9607a5c7bf;
 
     // Token addresses on Optimism
     address constant USDC = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85; // USDC on Optimism
