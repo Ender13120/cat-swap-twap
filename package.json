@@ -1,0 +1,36 @@
+{
+  "name": "cat-swap-twap",
+  "version": "1.0.0",
+  "description": "DelegatedWallet with 1inch integration for TWAP orders",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/scripts/submit-1inch-orders.js",
+    "dev": "ts-node scripts/submit-1inch-orders.ts",
+    "test": "forge test",
+    "compile": "forge build"
+  },
+  "keywords": [
+    "ethereum",
+    "1inch",
+    "twap",
+    "limit-orders",
+    "eip-7702",
+    "delegated-wallet"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@1inch/limit-order-sdk": "^4.0.0",
+    "ethers": "^6.8.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.0",
+    "ts-node": "^10.9.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
