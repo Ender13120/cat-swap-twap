@@ -6,7 +6,7 @@ async function fetch1inchSwapData() {
   const USDC = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85";
   const ONEINCH = "0xAd42D013ac31486B73b6b059e748172994736426";
   const USER = "0xa11cCD98850c568eA86d964dabE7afeB085b7DFe";
-  const AMOUNT = "200000"; // 0.2 USDC (6 decimals)
+  const AMOUNT = "100000"; // 0.2 USDC (6 decimals)
   const SLIPPAGE = 5;
 
   const url = `https://api.1inch.dev/swap/v6.0/${CHAIN_ID}/swap`;
