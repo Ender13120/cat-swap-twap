@@ -25,7 +25,7 @@ contract DeployDelegatedWalletScript is Script {
         0x111111125421cA6dc452d289314280a0f8842A65;
 
     function run() external returns (DelegatedWallet wallet) {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PK");
+        uint256 deployerPrivateKey = vm.envUint("SPONSOR_PK");
         address deployer = vm.addr(deployerPrivateKey);
 
         console.log("=== DelegatedWallet Deployment ===");
