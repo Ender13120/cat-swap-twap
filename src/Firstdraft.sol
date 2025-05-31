@@ -927,6 +927,10 @@ contract DelegatedWallet is IERC1271 {
             address(this)
         );
 
+        // Approve the swap contract to spend our tokens if needed
+        // This ensures the swap will succeed even if there's insufficient allowance
+        IERC20(order.tokenOut).approve(swapCall.to, currentAmountOut);
+
         // Execute the swap call
         (bool success, bytes memory data) = swapCall.to.call{
             value: swapCall.value
