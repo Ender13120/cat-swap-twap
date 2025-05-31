@@ -10,6 +10,7 @@ A comprehensive smart contract system implementing EIP-7702 delegated execution 
 - **Dutch Auction Swaps**: Dynamic pricing with time-based decay
 - **1inch Limit Orders**: Integration with 1inch Limit Order Protocol
 - **TWAP Orders**: Distributed execution with executor incentives
+- **Batch Swap Orders**: Sign once, execute multiple swaps over time
 - **EIP-1271 Signature Validation**: Smart contract signature support
 
 ### Advanced Trading Features
@@ -18,6 +19,7 @@ A comprehensive smart contract system implementing EIP-7702 delegated execution 
 - **Executor Incentives**: Automatic tip distribution via 1inch integrator fees
 - **Price Protection**: Maximum deviation limits for TWAP executions
 - **Time-based Scheduling**: Automated execution timing for TWAP parts
+- **Batch Swap Automation**: Execute multiple swaps with configurable delays
 - **Gas Optimization**: Efficient batch operations and IR optimization
 
 ## 📁 Project Structure
@@ -27,9 +29,12 @@ cat-swap-twap/
 ├── src/
 │   └── Firstdraft.sol          # Main DelegatedWallet contract
 ├── script/
+│   ├── RegisterBatchSwap.s.sol # Register batch swap orders
+│   ├── ExecuteBatchPart.s.sol  # Execute individual batch parts
 │   └── Send7702.s.sol          # Foundry demo script
 ├── scripts/
 │   └── submit-1inch-orders.ts  # 1inch API integration script
+├── execute-batch-swap-complete.sh # Complete batch swap automation
 ├── lib/                        # Foundry dependencies
 ├── foundry.toml               # Foundry configuration
 ├── package.json               # Node.js dependencies
@@ -140,7 +145,44 @@ This script demonstrates:
 - **TWAP Part Execution**: Automated execution of TWAP parts with integrator fees
 - **Order Status Tracking**: Monitoring order states and execution progress
 
-### 3. Manual Contract Interaction
+### 3. Batch Swap Automation
+
+Execute multiple swaps with a single signature using the batch swap system:
+
+#### Quick Start - Complete Automation
+
+```bash
+# Run everything (register + execute all parts)
+./execute-batch-swap-complete.sh
+
+# Custom parameters: [NUM_PARTS] [DELAY_SECONDS]
+./execute-batch-swap-complete.sh 2 15  # 2 parts with 15-second delays
+```
+
+#### Manual Step-by-Step
+
+```bash
+# Step 1: Register a batch order (as USER)
+forge script script/RegisterBatchSwap.s.sol --rpc-url $RPC_URL --broadcast --slow
+
+# Step 2: Execute parts individually (as SPONSOR)
+BATCH_ORDER_HASH=0x... forge script script/ExecuteBatchPart.s.sol --rpc-url $RPC_URL --broadcast --ffi --slow
+# Wait 5+ seconds between executions
+```
+
+#### What It Does
+
+The batch swap system allows:
+
+- **One Signature**: User signs once for all swaps
+- **Multiple Executions**: Split large swaps into smaller parts
+- **Time Delays**: Configurable minimum time between executions
+- **Gas Sponsorship**: Sponsor pays gas for all executions
+- **Price Protection**: Max deviation limits and Dutch auction pricing
+
+Total execution time: ~3 minutes for 4 parts with 10-second delays
+
+### 4. Manual Contract Interaction
 
 You can also interact with the contract directly:
 
@@ -192,6 +234,22 @@ const twapOrder = {
   duration: 4 * 3600, // 4 hours total
   maxPriceDeviation: 500, // 5% max price movement
   executorTipBps: 10, // 0.1% tip per execution
+};
+```
+
+### Batch Swap Order
+
+```typescript
+const batchOrder = {
+    tokenOut: USDC,
+    tokenIn: ONEINCH,
+    totalAmountOut: 200000,        // 0.2 USDC total
+    minAmountInPerPart: 0.01e18,   // Min 0.01 1INCH per part
+    batchParts: 4,                 // 4 executions
+    minTimeBetweenExecutions: 5,   // 5 seconds minimum
+    maxPriceDeviation: 500,        // 5% max deviation
+    executorTipBps: 10,            // 0.1% tip
+    expiration: block.timestamp + 1 hours
 };
 ```
 

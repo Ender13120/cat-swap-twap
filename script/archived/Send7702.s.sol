@@ -73,11 +73,11 @@ contract Send7702Script is Script {
 
         // 1. Demonstrate Batch Execution
         console.log("\n1. === BATCH EXECUTION DEMO ===");
-        _demonstrateBatchExecution(wallet, user, sponsor, userPk);
+        // _demonstrateBatchExecution(wallet, user, sponsor, userPk);
 
         // 2. Demonstrate Dutch Auction Swap
         console.log("\n2. === DUTCH AUCTION SWAP DEMO ===");
-        _demonstrateDutchAuctionSwap(wallet, user, userPk);
+        //_demonstrateDutchAuctionSwap(wallet, user, userPk);
 
         // 3. Demonstrate 1inch Limit Order
         console.log("\n3. === 1INCH LIMIT ORDER DEMO ===");
@@ -85,11 +85,11 @@ contract Send7702Script is Script {
 
         // 4. Demonstrate TWAP Order
         console.log("\n4. === TWAP ORDER DEMO ===");
-        _demonstrateTWAPOrder(wallet, user, userPk);
+        //_demonstrateTWAPOrder(wallet, user, userPk);
 
         // 5. Demonstrate TWAP Execution
         console.log("\n5. === TWAP EXECUTION DEMO ===");
-        _demonstrateTWAPExecution(wallet, user);
+        //_demonstrateTWAPExecution(wallet, user);
 
         vm.stopBroadcast();
 
@@ -278,9 +278,10 @@ contract Send7702Script is Script {
         bytes memory limitSig = abi.encodePacked(r, s, v);
 
         // Register limit order
-        bytes32 registeredHash = wallet.registerLimitOrder(
+        bytes32 registeredHash = wallet.registerLimitOrderOnChain(
             limitOrder,
-            limitSig
+            limitSig,
+            ""
         );
 
         console.log("[SUCCESS] 1inch limit order registered");
@@ -352,10 +353,11 @@ contract Send7702Script is Script {
         uint256 initialPrice = (TWAP_TAKING_AMOUNT * 1e18) / TWAP_MAKING_AMOUNT;
 
         // Register TWAP order
-        bytes32 registeredTwapHash = wallet.registerTWAPOrder(
+        bytes32 registeredTwapHash = wallet.registerTWAPOrderOnChain(
             twapOrder,
             twapSig,
-            initialPrice
+            initialPrice,
+            ""
         );
 
         console.log("[SUCCESS] TWAP order registered");

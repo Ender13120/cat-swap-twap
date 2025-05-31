@@ -8,6 +8,7 @@ import {
 } from "@1inch/limit-order-sdk";
 import { Wallet, JsonRpcProvider } from "ethers";
 import * as dotenv from "dotenv";
+import { ethers } from "ethers";
 
 // Load environment variables
 dotenv.config();
@@ -17,15 +18,18 @@ dotenv.config();
 // ============================================================================
 
 // Network configuration
-const NETWORK_ID = 1; // Ethereum mainnet
-const RPC_URL = process.env.RPC_URL || "https://eth.llamarpc.com";
+const NETWORK_ID = 10; // Optimism
+const RPC_URL = process.env.RPC_URL || "https://mainnet.optimism.io";
 const ONEINCH_API_KEY = process.env.ONEINCH_API_KEY || "";
 
 // Contract addresses
-const DELEGATED_WALLET_IMPL = "0x5bE8343c4E0Ca42FF6DC7649b402d2a868A45c38";
-const USDT_ADDRESS = "0xdac17f958d2ee523a2206206994597c13d831ec7"; // Real USDT on mainnet
-const ONEINCH_TOKEN_ADDRESS = "0xad42d013ac31486b73b6b059e748172994736426"; // Real 1INCH token on mainnet
-const ONEINCH_PROTOCOL = "0x111111125421cA6dc452d289314280a0f8842A65";
+const DELEGATED_WALLET_IMPL = "0xa11cCD98850c568eA86d964dabE7afeB085b7DFe";
+const DELEGATED_WALLET_ADDRESS =
+  process.env.DELEGATED_WALLET_ADDRESS ||
+  "0x742d35Cc6676C4Ce5e8c9A48E668ec57b8e2aFf8"; // Fallback test address
+const USDC_ADDRESS = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"; // USDC on Optimism
+const ONEINCH_TOKEN_ADDRESS = "0x111111111117dC0aa78b770fA6A738034120C302"; // 1INCH token
+const ONEINCH_PROTOCOL = "0x111111125421cA6dc452d289314280a0f8842A65"; // 1inch on Optimism
 
 // Private keys (use environment variables in production)
 const USER_PRIVATE_KEY =
@@ -87,6 +91,13 @@ async function main() {
     process.exit(1);
   }
 
+  // Temporarily commented out for testing
+  // if (!DELEGATED_WALLET_ADDRESS) {
+  //   console.error("❌ Error: DELEGATED_WALLET_ADDRESS not set in .env file");
+  //   console.log("   Please deploy the DelegatedWallet contract first and add its address to .env");
+  //   process.exit(1);
+  // }
+
   // Initialize provider and wallets
   const provider = new JsonRpcProvider(RPC_URL);
   const userWallet = new Wallet(USER_PRIVATE_KEY, provider);
@@ -99,7 +110,24 @@ async function main() {
   const api = new Api({
     authKey: ONEINCH_API_KEY,
     networkId: NETWORK_ID,
-    httpConnector: new FetchProviderConnector(),
+    httpConnector: {
+      async get<T>(url: string, headers: Record<string, string>): Promise<T> {
+        const response = await fetch(url, { headers });
+        return response.json() as Promise<T>;
+      },
+      async post<T>(
+        url: string,
+        data: unknown,
+        headers: Record<string, string>
+      ): Promise<T> {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        return response.json() as Promise<T>;
+      },
+    },
   });
 
   console.log("🔗 Connected to 1inch API with network ID:", NETWORK_ID);
@@ -163,12 +191,12 @@ async function submitLimitOrder(
     // Create the order
     const order = new LimitOrder(
       {
-        makerAsset: new Address(USDT_ADDRESS),
+        makerAsset: new Address(USDC_ADDRESS),
         takerAsset: new Address(ONEINCH_TOKEN_ADDRESS),
         makingAmount: LIMIT_ORDER_CONFIG.makingAmount,
         takingAmount: LIMIT_ORDER_CONFIG.takingAmount,
-        maker: new Address(userWallet.address),
-        receiver: new Address(userWallet.address),
+        maker: new Address(DELEGATED_WALLET_ADDRESS),
+        receiver: new Address(DELEGATED_WALLET_ADDRESS),
       },
       makerTraits
     );
@@ -200,14 +228,18 @@ async function submitLimitOrder(
     );
 
     // Get typed data and sign
-    const typedData = order.getTypedData(NETWORK_ID);
-    const signature = await userWallet.signTypedData(
-      typedData.domain,
-      typedData.types,
-      typedData.message
-    );
+    console.log("✍️  Creating EIP-1271 compatible signature...");
 
-    console.log("✍️  Order signed");
+    // For EIP-1271, we need to create a signature that our smart contract can validate
+    // The contract expects the order hash signed by the user
+    const limitOrderHash = order.getOrderHash(NETWORK_ID);
+    console.log("Order hash for signing:", limitOrderHash);
+
+    // Sign the order hash directly (this is what EIP-1271 will validate)
+    const signature = await userWallet.signMessage(
+      ethers.getBytes(limitOrderHash)
+    );
+    console.log("✍️  Order signed with EIP-1271 compatible signature");
 
     // Submit to 1inch
     console.log("📡 Submitting order to 1inch...");
@@ -288,12 +320,12 @@ async function createTWAPOrder(
 
   const baseOrder = new LimitOrder(
     {
-      makerAsset: new Address(USDT_ADDRESS),
+      makerAsset: new Address(USDC_ADDRESS),
       takerAsset: new Address(ONEINCH_TOKEN_ADDRESS),
       makingAmount: TWAP_CONFIG.makingAmount,
       takingAmount: TWAP_CONFIG.takingAmount,
-      maker: new Address(userWallet.address),
-      receiver: new Address(userWallet.address),
+      maker: new Address(DELEGATED_WALLET_ADDRESS),
+      receiver: new Address(DELEGATED_WALLET_ADDRESS),
     },
     baseTraits
   );
@@ -442,15 +474,15 @@ async function createTWAPPart(
     .withNonce(randBigInt(UINT_40_MAX));
 
   // In a real implementation, this would be the DelegatedWallet address
-  // For demo, we use executor wallet
+  // Using the smart contract as the maker for EIP-1271 compatibility
   const partOrder = new LimitOrder(
     {
-      makerAsset: new Address(USDT_ADDRESS),
+      makerAsset: new Address(USDC_ADDRESS),
       takerAsset: new Address(ONEINCH_TOKEN_ADDRESS),
       makingAmount: twapInfo.partMakingAmount,
       takingAmount: totalTakingAmount,
-      maker: new Address(executorWallet.address),
-      receiver: new Address(executorWallet.address),
+      maker: new Address(DELEGATED_WALLET_ADDRESS), // Use smart contract as maker
+      receiver: new Address(DELEGATED_WALLET_ADDRESS), // Receive tokens to the contract
       // In production, you would add integrator fee configuration here
       // This is a simplified version - check 1inch docs for proper integrator fee setup
     },
@@ -458,14 +490,19 @@ async function createTWAPPart(
   );
 
   // Sign the order
-  const typedData = partOrder.getTypedData(NETWORK_ID);
-  const signature = await executorWallet.signTypedData(
-    typedData.domain,
-    typedData.types,
-    typedData.message
-  );
+  console.log("✍️  Creating EIP-1271 compatible signature for TWAP part...");
 
-  console.log(`✍️  TWAP part ${partIndex + 1} signed`);
+  // For EIP-1271, sign the order hash directly
+  const twapPartOrderHash = partOrder.getOrderHash(NETWORK_ID);
+  console.log("TWAP part order hash for signing:", twapPartOrderHash);
+
+  // Sign the order hash directly (this is what EIP-1271 will validate)
+  const signature = await executorWallet.signMessage(
+    ethers.getBytes(twapPartOrderHash)
+  );
+  console.log(
+    `✍️  TWAP part ${partIndex + 1} signed with EIP-1271 compatible signature`
+  );
 
   return {
     partIndex,
