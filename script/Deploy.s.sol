@@ -1,25 +1,21 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.23;
 
-import {Script} from "forge-std/Script.sol";
-import {console} from "forge-std/console.sol";
-import {DelegatedWallet} from "../src/Firstdraft.sol";
+import "forge-std/Script.sol";
+import "../src/Firstdraft.sol";
 
 contract DeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        // 1inch Limit Order Protocol on Ethereum mainnet
-        address limitOrderProtocol = 0x111111125421cA6dc452d289314280a0f8842A65;
-
         vm.startBroadcast(deployerPrivateKey);
 
-        console.log("Deploying DelegatedWallet...");
-        console.log("1inch Protocol:", limitOrderProtocol);
+        // Deploy the DelegatedWallet contract
+        DelegatedWallet wallet = new DelegatedWallet(
+            0x111111125421cA6dc452d289314280a0f8842A65
+        );
 
-        DelegatedWallet wallet = new DelegatedWallet(limitOrderProtocol);
-
-        console.log("DelegatedWallet deployed at:", address(wallet));
+        console.log("DelegatedWallet deployed to:", address(wallet));
 
         vm.stopBroadcast();
     }
