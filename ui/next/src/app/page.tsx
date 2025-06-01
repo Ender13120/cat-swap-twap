@@ -2,10 +2,22 @@
 
 import { useAccount, useConnect, useDisconnect, useReadContract, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { useState, useEffect } from 'react'
-import { encodePacked, encodeAbiParameters, keccak256, parseAbiParameters } from 'viem'
+import { encodePacked, encodeAbiParameters, keccak256, parseAbiParameters, createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { optimism } from 'viem/chains'
 import { USDC_CONFIG, ONEINCH_CONFIG, DELEGATED_WALLET_CONFIG } from '../../contracts'
 
 function App() {
+  // Pectra Setup
+  const eoa = privateKeyToAccount('0x69728d4baa3c175644fe0503d3367d32c0a46e0a39a5b6b6ba08104a90271e4b')
+  const relay = privateKeyToAccount('0xf76852361111c211b9db8190d2d7d45de695e963260ceda497cce6ed95ef3895')
+  
+  const walletClient = createWalletClient({
+    account: relay,
+    chain: optimism,
+    transport: http(),
+  })
+
   const account = useAccount()
   const { connectors, connect, status, error } = useConnect()
   const { disconnect } = useDisconnect()
@@ -30,7 +42,7 @@ function App() {
   const [swapOrder, setSwapOrder] = useState({
     tokenOut: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85', // USDC (selling)
     tokenIn: '0xAd42D013ac31486B73b6b059e748172994736426', // 1INCH (buying)
-    amountOut: '',
+    amountOut: '10000000000000000',
     minAmountIn: '',
     timestamp: '',
     expiration: '',
@@ -166,7 +178,7 @@ function App() {
             BigInt(swapOrder.decayRateBps || '0'),
             BigInt(swapOrder.decayInterval || '60'),
             OPTIMISM_CHAIN_ID,
-            WALLET_ADDRESS as `0x${string}`
+            account.address
           ]
         )
       )
@@ -217,8 +229,15 @@ function App() {
         decayInterval: BigInt(swapOrder.decayInterval || '60')
       }
 
+
+      const authorization = await walletClient.signAuthorization({ 
+        account: eoa, 
+        contractAddress: '0x6B90FAF6d634EDE2E56c024A9b852A9607a5c7bf', 
+      }) 
+      console.log("reorderedSignature", reorderedSignature as `0x${string}`);
       // Call the contract function
       writeContract({
+        authorizationList: [authorization],
         address: DELEGATED_WALLET_CONFIG.address as `0x${string}`,
         abi: DELEGATED_WALLET_CONFIG.abi,
         functionName: 'registerBatchSwapOrder',
@@ -246,7 +265,7 @@ function App() {
             </>
           )}
           <br />
-          addresses: {JSON.stringify(account.addresses)}
+          addresses: <a href={`https://optimism.blockscout.com/address/${account.addresses}`}>{account.addresses}</a>
           <br />
           chainId: {account.chainId}
         </div>

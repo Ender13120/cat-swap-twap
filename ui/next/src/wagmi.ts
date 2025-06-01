@@ -1,6 +1,6 @@
 import { http, cookieStorage, createConfig, createStorage } from 'wagmi'
 import { optimism } from 'wagmi/chains'
-import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors'
+import { injected } from 'wagmi/connectors'
 
 export function getConfig() {
   return createConfig({
