@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import {DelegatedWallet} from "../src/Firstdraft.sol";
+import {DelegatedWallet} from "../../src/Firstdraft.sol";
 
 interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
@@ -12,10 +12,10 @@ interface IERC20 {
 contract ExecuteBatchSwap is Script {
     // Use the user address directly since EIP-7702 stores state there
     DelegatedWallet constant WALLET =
-        DelegatedWallet(payable(0xa11cCD98850c568eA86d964dabE7afeB085b7DFe));
+        DelegatedWallet(payable(0xa11ceB73aB7888736F264A3502933178f0a18553));
 
     // User credentials (for signing the batch order)
-    address constant USER = 0xa11cCD98850c568eA86d964dabE7afeB085b7DFe;
+    address constant USER = 0xa11ceB73aB7888736F264A3502933178f0a18553;
     uint256 constant USER_PK =
         0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
 

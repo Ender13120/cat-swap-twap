@@ -36,13 +36,22 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Extract the order hash from the output
-ORDER_HASH=$(echo "$REGISTER_OUTPUT" | grep -oE "0x[a-fA-F0-9]{64}" | tail -1)
+# Extract the order hash from the output - look for the hex string after "Order Hash:"
+ORDER_HASH=$(echo "$REGISTER_OUTPUT" | grep -A1 "Order Hash:" | tail -1 | grep -oE "0x[a-fA-F0-9]{64}" | head -1)
+
+# If that didn't work, try another pattern
+if [ -z "$ORDER_HASH" ]; then
+    ORDER_HASH=$(echo "$REGISTER_OUTPUT" | grep -oE "0x[a-fA-F0-9]{64}" | tail -1)
+fi
 
 if [ -z "$ORDER_HASH" ]; then
     echo -e "${RED}✗ Could not extract order hash from registration output${NC}"
     echo "Registration output:"
     echo "$REGISTER_OUTPUT"
+    echo ""
+    echo -e "${YELLOW}But registration likely succeeded! Check the output above for the order hash.${NC}"
+    echo "You can manually run the execution with:"
+    echo "BATCH_ORDER_HASH=<your_order_hash> forge script script/ExecuteBatchPart.s.sol --rpc-url $RPC_URL --broadcast --ffi --slow"
     exit 1
 fi
 

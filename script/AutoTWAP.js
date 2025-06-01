@@ -5,8 +5,12 @@ const axios = require("axios");
 const RPC_URL = "https://mainnet.optimism.io";
 const PRIVATE_KEY = process.env.EXECUTOR_PK; // Bot's private key
 const CONTRACT_ADDRESS = "0xa11ceB73aB7888736F264A3502933178f0a18553"; // User's delegated wallet
+// !PLACEHOLDER! - Order hash removed for security
+// Load from environment variable instead:
+// const ORDER_HASH = process.env.TWAP_ORDER_HASH;
 const ORDER_HASH =
-  "0x12a68bc4b4a34698776cbf2043398338a5be801c99ab2195500a52297442bfb4";
+  process.env.TWAP_ORDER_HASH ||
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 // Setup provider and contract
 const provider = new ethers.JsonRpcProvider(RPC_URL);

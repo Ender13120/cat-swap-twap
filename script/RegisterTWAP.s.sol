@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import {DelegatedWallet} from "../../src/Firstdraft.sol";
+import {DelegatedWallet} from "../src/Firstdraft.sol";
 
 contract RegisterTWAP is Script {
     // Use the user address directly since EIP-7702 stores state there
@@ -11,8 +11,9 @@ contract RegisterTWAP is Script {
 
     // User address (should be the one that created the order)
     address constant USER = 0xa11ceB73aB7888736F264A3502933178f0a18553;
-    uint256 constant USER_PK =
-        0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
+    // !PLACEHOLDER! - Private key removed for security
+    // Load from environment variable instead:
+    // uint256 USER_PK = vm.envUint("USER_PK");
 
     // Implementation contract address for EIP-7702 (newly deployed with simplified validation)
     address constant IMPLEMENTATION_ADDRESS =
@@ -23,6 +24,9 @@ contract RegisterTWAP is Script {
     address constant ONEINCH = 0xAd42D013ac31486B73b6b059e748172994736426; // 1INCH on Optimism
 
     function run() external {
+        // Load private key from environment
+        uint256 USER_PK = vm.envUint("USER_PK");
+
         vm.startBroadcast(USER_PK);
 
         console.log("=== REGISTERING TWAP ORDER ON-CHAIN ===");

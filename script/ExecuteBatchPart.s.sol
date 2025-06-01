@@ -11,12 +11,10 @@ interface IERC20 {
 contract ExecuteBatchPart is Script {
     // Constants
     DelegatedWallet constant WALLET =
-        DelegatedWallet(payable(0xa11cCD98850c568eA86d964dabE7afeB085b7DFe));
+        DelegatedWallet(payable(0xa11ceB73aB7888736F264A3502933178f0a18553));
 
     // Sponsor credentials (for executing parts)
-    address constant SPONSOR = 0x666666Af7429e4B3C00B9CCAaFDC6CEda313EBe6;
-    uint256 constant SPONSOR_PK =
-        0x41fda6d6bdba7e3b269b0e83ff0c756bf4029053431e17defea29eb08c64618f;
+    address constant SPONSOR = 0xb0b4240FDD73c460736c2f65b385647f2425C68f;
 
     // Token addresses on Optimism
     address constant USDC = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;
@@ -27,6 +25,7 @@ contract ExecuteBatchPart is Script {
         0x111111125421cA6dc452d289314280a0f8842A65;
 
     function run() external {
+        uint256 SPONSOR_PK = vm.envUint("SPONSOR_PK");
         vm.startBroadcast(SPONSOR_PK);
 
         // Get order hash from environment or use a default

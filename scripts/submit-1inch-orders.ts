@@ -17,13 +17,19 @@ dotenv.config();
 // CONFIGURATION
 // ============================================================================
 
+// Setup (using Alchemy provider for Optimism mainnet)
 // Network configuration
 const NETWORK_ID = 10; // Optimism
-const RPC_URL = process.env.RPC_URL || "https://mainnet.optimism.io";
+const RPC_URL =
+  "https://opt-mainnet.g.alchemy.com/v2/kqRIGj2Y7_VBXjGoBWQfHGd-5V0JFHD5";
 const ONEINCH_API_KEY = process.env.ONEINCH_API_KEY || "";
 
+//@TODO: Add the following to .env file:
+// USER_PK2=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+// EXECUTOR_PK=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+
 // Contract addresses
-const DELEGATED_WALLET_IMPL = "0xa11cCD98850c568eA86d964dabE7afeB085b7DFe";
+const DELEGATED_WALLET_IMPL = "0xa11ceB73aB7888736F264A3502933178f0a18553";
 const DELEGATED_WALLET_ADDRESS =
   process.env.DELEGATED_WALLET_ADDRESS ||
   "0x742d35Cc6676C4Ce5e8c9A48E668ec57b8e2aFf8"; // Fallback test address
@@ -32,12 +38,8 @@ const ONEINCH_TOKEN_ADDRESS = "0x111111111117dC0aa78b770fA6A738034120C302"; // 1
 const ONEINCH_PROTOCOL = "0x111111125421cA6dc452d289314280a0f8842A65"; // 1inch on Optimism
 
 // Private keys (use environment variables in production)
-const USER_PRIVATE_KEY =
-  process.env.USER_PK2 ||
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
-const EXECUTOR_PRIVATE_KEY =
-  process.env.EXECUTOR_PK ||
-  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+const USER_PRIVATE_KEY = process.env.USER_PK2 || "";
+const EXECUTOR_PRIVATE_KEY = process.env.EXECUTOR_PK || "";
 
 // Order parameters
 const LIMIT_ORDER_CONFIG = {
@@ -99,9 +101,9 @@ async function main() {
   // }
 
   // Initialize provider and wallets
-  const provider = new JsonRpcProvider(RPC_URL);
-  const userWallet = new Wallet(USER_PRIVATE_KEY, provider);
-  const executorWallet = new Wallet(EXECUTOR_PRIVATE_KEY, provider);
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+  const userWallet = new ethers.Wallet(USER_PRIVATE_KEY, provider);
+  const executorWallet = new ethers.Wallet(EXECUTOR_PRIVATE_KEY, provider);
 
   console.log("👤 User wallet:", userWallet.address);
   console.log("🤖 Executor wallet:", executorWallet.address);
