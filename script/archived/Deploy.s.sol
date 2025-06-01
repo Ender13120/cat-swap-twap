@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 import "forge-std/Script.sol";
-import "../src/Firstdraft.sol";
+import "../../src/Firstdraft.sol";
 
 contract DeployScript is Script {
     function run() external {

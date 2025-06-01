@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import {DelegatedWallet} from "../src/Firstdraft.sol";
+import {DelegatedWallet} from "../../src/Firstdraft.sol";
 
 contract RegisterTWAP is Script {
     // Use the user address directly since EIP-7702 stores state there

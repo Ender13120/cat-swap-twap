@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import {DelegatedWallet} from "../src/Firstdraft.sol";
+import {DelegatedWallet} from "../../src/Firstdraft.sol";
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
