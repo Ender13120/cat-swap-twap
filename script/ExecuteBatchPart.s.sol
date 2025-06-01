@@ -11,10 +11,10 @@ interface IERC20 {
 contract ExecuteBatchPart is Script {
     // Constants
     DelegatedWallet constant WALLET =
-        DelegatedWallet(payable(0xa11cCD98850c568eA86d964dabE7afeB085b7DFe));
+        DelegatedWallet(payable(0xa11ceB73aB7888736F264A3502933178f0a18553));
 
     // Sponsor credentials (for executing parts)
-    address constant SPONSOR = 0x666666Af7429e4B3C00B9CCAaFDC6CEda313EBe6;
+    address constant SPONSOR = 0xb0b4240FDD73c460736c2f65b385647f2425C68f;
 
     // Token addresses on Optimism
     address constant USDC = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;

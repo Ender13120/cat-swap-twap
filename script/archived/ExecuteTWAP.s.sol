@@ -7,25 +7,24 @@ import {DelegatedWallet} from "../src/Firstdraft.sol";
 contract ExecuteTWAP is Script {
     // Use the user address directly since EIP-7702 stores state there
     DelegatedWallet constant WALLET =
-        DelegatedWallet(payable(0xa11cCD98850c568eA86d964dabE7afeB085b7DFe));
+        DelegatedWallet(payable(0xa11ceB73aB7888736F264A3502933178f0a18553));
 
     // Updated with the new TWAP order hash from RegisterTWAP simulation
     bytes32 constant ORDER_HASH =
         0xab7aee9aa446b32d689ae140977102c47b78064afd901bac400b759892c901aa;
 
-    // User address (should be the one that created the order)
-    address constant USER = 0xa11cCD98850c568eA86d964dabE7afeB085b7DFe;
-    uint256 constant USER_PK =
-        0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
+    // User credentials
+    address constant USER = 0xa11ceB73aB7888736F264A3502933178f0a18553;
 
     // Implementation contract address for EIP-7702 (newly deployed)
     address constant IMPLEMENTATION_ADDRESS =
         0xE92a890a2Bf4105e7240e0a6465141FA1fA7530D;
 
     // Integrator wallet (the one executing TWAP parts - gets tips)
-    address constant INTEGRATOR = 0x666666Af7429e4B3C00B9CCAaFDC6CEda313EBe6;
+    address constant INTEGRATOR = 0xb0b4240FDD73c460736c2f65b385647f2425C68f;
 
     function run() external {
+        uint256 USER_PK = vm.envUint("USER_PK");
         vm.startBroadcast(USER_PK);
 
         console.log("=== EXECUTING TWAP PART ON-CHAIN ===");

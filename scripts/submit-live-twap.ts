@@ -22,7 +22,7 @@ const RPC_URL = "https://mainnet.optimism.io";
 const ONEINCH_API_KEY = process.env.ONEINCH_API_KEY || "";
 
 // Live contract addresses on Optimism
-const DELEGATED_WALLET_ADDRESS = "0xa11cCD98850c568eA86d964dabE7afeB085b7DFe"; // Our user's delegated wallet
+const DELEGATED_WALLET_ADDRESS = "0xa11ceB73aB7888736F264A3502933178f0a18553"; // Our user's delegated wallet
 const USDC_ADDRESS = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"; // USDC on Optimism
 const ONEINCH_TOKEN_ADDRESS = "0x111111111117dC0aa78b770fA6A738034120C302"; // 1INCH token
 const ONEINCH_PROTOCOL = "0x111111125421cA6dc452d289314280a0f8842A65"; // 1inch on Optimism

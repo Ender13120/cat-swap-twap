@@ -13,10 +13,10 @@ contract ExecuteFirstPart is Script {
     DelegatedWallet constant WALLET =
         DelegatedWallet(payable(0xa11ceB73aB7888736F264A3502933178f0a18553));
 
-    // Sponsor credentials (for executing parts)
+    // Sponsor credentials (who pays gas and executes)
     address constant SPONSOR = 0xb0b4240FDD73c460736c2f65b385647f2425C68f;
-    //@TODO: Add SPONSOR_PK=0x41fda6d6bdba7e3b269b0e83ff0c756bf4029053431e17defea29eb08c64618f to .env file
-    // uint256 SPONSOR_PK loaded in run() function
+    uint256 constant SPONSOR_PK =
+        0x41fda6d6bdba7e3b269b0e83ff0c756bf4029053431e17defea29eb08c64618f;
 
     // Token addresses on Optimism
     address constant USDC = 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85;
@@ -31,7 +31,6 @@ contract ExecuteFirstPart is Script {
         0xf70c07a66a98c8eb87fd2c72d4b2241e60315a22e16c17469f958c45e72118b7;
 
     function run() external {
-        uint256 SPONSOR_PK = vm.envUint("SPONSOR_PK");
         vm.startBroadcast(SPONSOR_PK);
 
         console.log("=== EXECUTING FIRST BATCH SWAP PART ===");

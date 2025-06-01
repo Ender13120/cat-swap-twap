@@ -11,10 +11,10 @@ interface IERC20 {
 contract RegisterBatchSwap is Script {
     // Constants
     DelegatedWallet constant WALLET =
-        DelegatedWallet(payable(0xa11cCD98850c568eA86d964dabE7afeB085b7DFe));
+        DelegatedWallet(payable(0xa11ceB73aB7888736F264A3502933178f0a18553));
 
     // User credentials (for signing the batch order)
-    address constant USER = 0xa11cCD98850c568eA86d964dabE7afeB085b7DFe;
+    address constant USER = 0xa11ceB73aB7888736F264A3502933178f0a18553;
     //@TODO: Add USER_PK=0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9 to .env file
     // uint256 USER_PK = vm.envUint("USER_PK"); // Moved to run() function
 

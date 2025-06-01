@@ -15,8 +15,6 @@ contract ExecuteBatchParts is Script {
 
     // Sponsor credentials (who pays gas and executes)
     address constant SPONSOR = 0x666666Af7429e4B3C00B9CCAaFDC6CEda313EBe6;
-    uint256 constant SPONSOR_PK =
-        0x6b1daa76b1f3e5b5f5b9de956e093f8ab87c1f5df7ca0c8c8a3c72c07ca44a58;
 
     // Implementation contract address for EIP-7702
     address constant IMPLEMENTATION_ADDRESS =
@@ -35,6 +33,7 @@ contract ExecuteBatchParts is Script {
         0xf70c07a66a98c8eb87fd2c72d4b2241e60315a22e16c17469f958c45e72118b7;
 
     function run() external {
+        uint256 SPONSOR_PK = vm.envUint("SPONSOR_OLD_PK");
         vm.startBroadcast(SPONSOR_PK);
 
         console.log("=== EXECUTING BATCH SWAP PARTS ===");

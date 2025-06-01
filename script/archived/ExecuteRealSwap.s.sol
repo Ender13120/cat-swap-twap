@@ -12,12 +12,12 @@ interface IERC20 {
 contract ExecuteRealSwapSponsor is Script {
     // Use the user address directly since EIP-7702 stores state there
     DelegatedWallet constant WALLET =
-        DelegatedWallet(payable(0xa11cCD98850c568eA86d964dabE7afeB085b7DFe));
+        DelegatedWallet(payable(0xa11ceB73aB7888736F264A3502933178f0a18553));
 
-    // User credentials (for signing the swap order)
-    address constant USER = 0xa11cCD98850c568eA86d964dabE7afeB085b7DFe;
-    uint256 constant USER_PK =
-        0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
+    // User credentials
+    address constant USER = 0xa11ceB73aB7888736F264A3502933178f0a18553;
+    //@TODO: Add USER_PK=0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9 to .env file
+    // uint256 USER_PK loaded in run() function
 
     // Implementation contract address for EIP-7702 (new contract with auto-approval)
     address constant IMPLEMENTATION_ADDRESS =
@@ -36,16 +36,17 @@ contract ExecuteRealSwapSponsor is Script {
         uint256 sponsorPrivateKey = vm.envUint("SPONSOR_PK");
         address sponsor = vm.addr(sponsorPrivateKey);
 
-        console.log("=== EXECUTING REAL SWAP WITH SPONSOR (USDC -> 1INCH) ===");
+        uint256 USER_PK = vm.envUint("USER_PK");
+
+        console.log(
+            "=== EXECUTING REAL SWAP WITH AUTO-APPROVAL VIA SPONSOR ==="
+        );
         console.log("Wallet Address:", address(WALLET));
         console.log("User:", USER);
         console.log("Sponsor (tx sender):", sponsor);
 
         // Start broadcast with sponsor key (who pays gas)
         vm.startBroadcast(sponsorPrivateKey);
-
-        // Note: EIP-7702 delegation must be done by the USER, not the sponsor
-        // So we'll skip it here and assume it's already set up
 
         // Check initial balances
         uint256 usdcBalanceBefore = IERC20(USDC).balanceOf(address(WALLET));

@@ -131,7 +131,7 @@ contract ExecuteRealSwapSponsor is Script {
         DelegatedWallet.SwapOrder memory swapOrder = DelegatedWallet.SwapOrder({
             tokenOut: USDC, // Selling USDC
             tokenIn: ONEINCH, // Buying 1INCH
-            amountOut: 200000, // 0.2 USDC (6 decimals)
+            amountOut: 100000, // 0.2 USDC (6 decimals)
             minAmountIn: (expectedAmount * 95) / 100, // 5% slippage tolerance
             timestamp: currentTime,
             expiration: currentTime + 1 hours, // Order expires in 1 hour
