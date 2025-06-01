@@ -60,10 +60,9 @@ function App() {
   // Update minAmountIn when USDC balance is loaded
   useEffect(() => {
     if (usdcBalance && !isLoadingBalance) {
-      const formattedBalance = formatUsdcBalance(usdcBalance)
       setSwapOrder(prev => ({
         ...prev,
-        minAmountIn: formattedBalance
+        minAmountIn: usdcBalance.toString()
       }))
     }
   }, [usdcBalance, isLoadingBalance])
@@ -188,6 +187,18 @@ function App() {
       const signature = await signMessageAsync({ message: { raw: messageHash } })
       console.log('Signature generated:', signature)
 
+      // Convert signature from v,r,s format to r,s,v format
+      // Standard signature format: 0x + r (32 bytes) + s (32 bytes) + v (1 byte)
+      const sigHex = signature.slice(2) // Remove 0x prefix
+      const r = sigHex.slice(0, 64)    // First 32 bytes (64 hex chars)
+      const s = sigHex.slice(64, 128)  // Next 32 bytes (64 hex chars)
+      const v = sigHex.slice(128, 130) // Last byte (2 hex chars)
+      
+      // Reorder to r,s,v format
+      const reorderedSignature = `0x${r}${s}${v}`
+      console.log('Original signature (v,r,s):', signature)
+      console.log('Reordered signature (r,s,v):', reorderedSignature)
+
       // Prepare batch order struct for contract call
       const batchOrder = {
         tokenOut: swapOrder.tokenOut as `0x${string}`,
@@ -211,7 +222,7 @@ function App() {
         address: DELEGATED_WALLET_CONFIG.address as `0x${string}`,
         abi: DELEGATED_WALLET_CONFIG.abi,
         functionName: 'registerBatchSwapOrder',
-        args: [batchOrder, signature as `0x${string}`]
+        args: [batchOrder, reorderedSignature as `0x${string}`]
       })
 
     } catch (err) {
