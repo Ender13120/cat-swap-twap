@@ -155,8 +155,8 @@ function App() {
           [
             swapOrder.tokenOut as `0x${string}`,
             swapOrder.tokenIn as `0x${string}`,
-            BigInt(Math.floor(parseFloat(swapOrder.amountOut || '0') * 1000000)), // Convert to USDC wei (6 decimals)
-            BigInt(Math.floor(parseFloat(swapOrder.minAmountIn || '0') * 1e18)), // Convert to 1INCH wei (18 decimals)
+            BigInt(swapOrder.amountOut || '0'), // Convert to USDC wei (6 decimals)
+            BigInt(swapOrder.minAmountIn || '0'), // Convert to 1INCH wei (18 decimals)
             BigInt(swapOrder.timestamp || '0'),
             BigInt(swapOrder.expiration || '0'),
             BigInt(swapOrder.numberOfParts || '4'),
