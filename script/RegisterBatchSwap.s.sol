@@ -15,8 +15,8 @@ contract RegisterBatchSwap is Script {
 
     // User credentials (for signing the batch order)
     address constant USER = 0xa11cCD98850c568eA86d964dabE7afeB085b7DFe;
-    uint256 constant USER_PK =
-        0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
+    //@TODO: Add USER_PK=0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9 to .env file
+    // uint256 USER_PK = vm.envUint("USER_PK"); // Moved to run() function
 
     // Implementation contract address for EIP-7702
     address constant IMPLEMENTATION_ADDRESS =
@@ -32,6 +32,7 @@ contract RegisterBatchSwap is Script {
     uint256 constant TIME_BETWEEN_PARTS = 5; // 5 seconds between executions
 
     function run() external {
+        uint256 USER_PK = vm.envUint("USER_PK");
         vm.startBroadcast(USER_PK);
 
         console.log("=== REGISTER BATCH SWAP ORDER ===");

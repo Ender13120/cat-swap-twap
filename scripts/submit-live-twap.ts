@@ -31,13 +31,17 @@ const ONEINCH_PROTOCOL = "0x111111125421cA6dc452d289314280a0f8842A65"; // 1inch 
 const LIVE_TWAP_ORDER_HASH =
   "0x12a68bc4b4a34698776cbf2043398338a5be801c99ab2195500a52297442bfb4";
 
-// User credentials
-const USER_PRIVATE_KEY =
-  process.env.USER_PK2 ||
-  "0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9";
-const EXECUTOR_PRIVATE_KEY =
-  process.env.EXECUTOR_PK ||
-  "0x41fda6d6bdba7e3b269b0e83ff0c756bf4029053431e17defea29eb08c64618f";
+// Private keys and wallets
+//@TODO: Add the following to .env file:
+// TWAP_LIVE_USER_PK=0x12a68bc4b4a34698776cbf2043398338a5be801c99ab2195500a52297442bfb4
+// USER_PK=0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9
+// SPONSOR_PK=0x41fda6d6bdba7e3b269b0e83ff0c756bf4029053431e17defea29eb08c64618f
+
+const executorPrivateKey = process.env.TWAP_LIVE_USER_PK || "";
+
+const userPrivateKey = process.env.USER_PK || "";
+
+const sponsorPrivateKey = process.env.SPONSOR_PK || "";
 
 // DelegatedWallet ABI
 const DELEGATED_WALLET_ABI = [
@@ -63,8 +67,8 @@ async function main() {
 
   // Initialize provider and wallets
   const provider = new JsonRpcProvider(RPC_URL);
-  const userWallet = new Wallet(USER_PRIVATE_KEY, provider);
-  const executorWallet = new Wallet(EXECUTOR_PRIVATE_KEY, provider);
+  const userWallet = new Wallet(userPrivateKey, provider);
+  const executorWallet = new Wallet(executorPrivateKey, provider);
 
   console.log("👤 User wallet (delegated):", userWallet.address);
   console.log("🤖 Executor wallet:", executorWallet.address);
@@ -359,7 +363,7 @@ async function executeEIP7702TWAPPart(
     );
     console.log(
       `💰 Gas used: ${receipt.gasUsed} (${formatAmount(
-        receipt.gasUsed * receipt.gasPrice,
+        BigInt(receipt.gasUsed) * BigInt(receipt.gasPrice),
         18
       )} ETH)`
     );

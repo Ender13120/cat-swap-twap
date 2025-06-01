@@ -16,8 +16,8 @@ contract ExecuteRealSwapAuto is Script {
 
     // User credentials
     address constant USER = 0xa11cCD98850c568eA86d964dabE7afeB085b7DFe;
-    uint256 constant USER_PK =
-        0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
+    //@TODO: Add USER_PK=0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9 to .env file
+    // uint256 USER_PK loaded in run() function
 
     // Implementation contract address for EIP-7702 (new contract with auto-approval)
     address constant IMPLEMENTATION_ADDRESS =
@@ -32,6 +32,7 @@ contract ExecuteRealSwapAuto is Script {
         0x111111125421cA6dc452d289314280a0f8842A65;
 
     function run() external {
+        uint256 USER_PK = vm.envUint("USER_PK");
         vm.startBroadcast(USER_PK);
 
         console.log(
