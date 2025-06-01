@@ -11,8 +11,9 @@ contract ExecuteSwap is Script {
 
     // User credentials
     address constant USER = 0xa11ceB73aB7888736F264A3502933178f0a18553;
-    uint256 constant USER_PK =
-        0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
+    // !PLACEHOLDER! - Private key removed for security
+    // Load from environment variable instead:
+    // uint256 USER_PK = vm.envUint("USER_PK");
 
     // Executor (the one running this script)
     address constant EXECUTOR = 0xb0b4240FDD73c460736c2f65b385647f2425C68f;
@@ -30,6 +31,9 @@ contract ExecuteSwap is Script {
         0x111111125421cA6dc452d289314280a0f8842A65;
 
     function run() external {
+        // Load private key from environment
+        uint256 USER_PK = vm.envUint("USER_PK");
+
         vm.startBroadcast(USER_PK);
 
         console.log("=== EXECUTING DUTCH AUCTION SWAP ===");

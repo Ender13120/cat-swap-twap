@@ -23,12 +23,16 @@ contract Execute7702 is Script {
     // Our fixed addresses and keys
     address constant user = 0xa11ceB73aB7888736F264A3502933178f0a18553;
     address constant sponsor = 0xb0b4240FDD73c460736c2f65b385647f2425C68f;
-    uint256 constant userPk =
-        0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9;
-    uint256 constant sponsorPk =
-        0x41fda6d6bdba7e3b269b0e83ff0c756bf4029053431e17defea29eb08c64618f;
+    // !PLACEHOLDER! - Private keys removed for security
+    // Load from environment variables instead:
+    // uint256 userPk = vm.envUint("USER_PK");
+    // uint256 sponsorPk = vm.envUint("SPONSOR_PK");
 
     function run() external {
+        // Load private keys from environment
+        uint256 userPk = vm.envUint("USER_PK");
+        uint256 sponsorPk = vm.envUint("SPONSOR_PK");
+
         console.log("=== Execute7702 Script ===");
         console.log("User:", user);
         console.log("Sponsor:", sponsor);

@@ -28,14 +28,18 @@ const ONEINCH_TOKEN_ADDRESS = "0x111111111117dC0aa78b770fA6A738034120C302"; // 1
 const ONEINCH_PROTOCOL = "0x111111125421cA6dc452d289314280a0f8842A65"; // 1inch on Optimism
 
 // Live TWAP order hash from our successful execution
+// !PLACEHOLDER! - Order hash removed for security
+// Load from environment variable instead:
+// const LIVE_TWAP_ORDER_HASH = process.env.LIVE_TWAP_ORDER_HASH || "";
 const LIVE_TWAP_ORDER_HASH =
-  "0x12a68bc4b4a34698776cbf2043398338a5be801c99ab2195500a52297442bfb4";
+  process.env.LIVE_TWAP_ORDER_HASH ||
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 // Private keys and wallets
 //@TODO: Add the following to .env file:
-// TWAP_LIVE_USER_PK=0x12a68bc4b4a34698776cbf2043398338a5be801c99ab2195500a52297442bfb4
-// USER_PK=0xf1b6c516f9431ff5b74fe0deee6c768c2bac756e3d0e5321f65ab6607a162cb9
-// SPONSOR_PK=0x41fda6d6bdba7e3b269b0e83ff0c756bf4029053431e17defea29eb08c64618f
+// TWAP_LIVE_USER_PK=<your_key_here>
+// USER_PK=<your_key_here>
+// SPONSOR_PK=<your_key_here>
 
 const executorPrivateKey = process.env.TWAP_LIVE_USER_PK || "";
 
